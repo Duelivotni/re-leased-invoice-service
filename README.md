@@ -36,55 +36,57 @@ The overall objective is to refactor the code and keep the tests passing.  There
 * The string return type in ProcessPayment is problematic as it forces client to parse unstructured messages; 
 * a strongly-typed response object would provide clearer contracts and better programmability.
 
+
 * Client side, before:
 
-* Returns unstructured string messages
-string result = _invoiceService.ProcessPayment(payment); 
-* Client must parse strings to determine outcome. How to do that efficiently?
+// Returns unstructured string messages
+
+        string result = _invoiceService.ProcessPayment(payment);
+
+// Client must parse strings to determine outcome. How to do that efficiently?
 
 * Client side, after:
 
-PaymentResult result = _invoiceService.ProcessPayment(payment);
+        PaymentResult result = _invoiceService.ProcessPayment(payment);
 
-if (result.IsSuccess)
-{
-    // Handle successful payment scenarios
-    switch (result.Code)
-    {
-        case ResultCode.FullyPaid:
-            _receiptService.Generate(invoice, result.AmountPaid);
-            _auditService.LogPaymentComplete(result.TransactionId);
-            break;
-
-        case ResultCode.PartiallyPaid:
-            _paymentTracker.ScheduleFollowUp(
-                result.RemainingAmount,
-                DateTime.Now.AddDays(7));
-            break;
-		
-		// Other cases
-    }
-}
-else // !IsSuccess
-{
-    // Handle failure scenarios
-    switch (result.Code)
-    {
-        case ResultCode.InsufficientFunds:
-            _retryHandler.QueueRetry(payment);
-            break;
-
-        case ResultCode.InvalidPaymentMethod:
-            _userNotifier.RequestPaymentMethodUpdate();
-            break;
-			
-		// Other cases
-
-        default:
-            _alertService.TriggerSupportAlert(result);
-            break;
-    }
-}
+        if (result.IsSuccess)  
+        {
+            switch (result.Code)
+            {
+                case ResultCode.FullyPaid:
+                    _receiptService.Generate(invoice, result.AmountPaid);
+                    _auditService.LogPaymentComplete(result.TransactionId);
+                    break;
+        
+                case ResultCode.PartiallyPaid:
+                    _paymentTracker.ScheduleFollowUp(
+                        result.RemainingAmount,
+                        DateTime.Now.AddDays(7));
+                    break;
+                
+                // Other cases
+            }
+        }
+        else
+        {
+            // Handle failure scenarios
+            switch (result.Code)
+            {
+                case ResultCode.InsufficientFunds:
+                    _retryHandler.QueueRetry(payment);
+                    break;
+        
+                case ResultCode.InvalidPaymentMethod:
+                    _userNotifier.RequestPaymentMethodUpdate();
+                    break;
+                    
+                // Other cases
+        
+                default:
+                    _alertService.TriggerSupportAlert(result);
+                    break;
+            }
+        }
 
 *** Architectural improvements
 * Proper layering with domain entities, services, and persistence
@@ -92,7 +94,9 @@ else // !IsSuccess
 * Clear boundaries between components
 * Each class has a single responsibility, easier to modify or extend behavior. Clear separation makes it easier to add new features.
 
-* Suggested Business Object Enhancements (not implemented):
+
+*** Suggested Business Object Enhancements (not implemented):
+
 
 * Invoice/Payment Data Enrichment
 * Currently missing critical transaction details: Payer/recipient identification (names, contact info)
